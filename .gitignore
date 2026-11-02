@@ -1,0 +1,15 @@
+**/.env
+**/.env.*
+!**/.env.example
+
+**/node_modules/
+**/dist/
+**/coverage/
+**/*.tsbuildinfo
+
+logs/
+**/*.log
+
+.DS_Store
+Thumbs.db
+desktop.ini

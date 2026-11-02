@@ -1,0 +1,131 @@
+
+services:
+
+  user-db:
+    image: mysql:8.4
+    restart: unless-stopped
+    env_file:
+      - ./user-service/.env
+    volumes:
+      - user-db-data:/var/lib/mysql
+      - ./database/users.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    networks:
+      - backend-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 30s
+    
+
+  device-db:
+    image: mysql:8.4
+    restart: unless-stopped
+    env_file:
+      - ./device-service/.env
+    volumes:
+      - device-db-data:/var/lib/mysql
+      - ./database/devices.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    networks:
+      - backend-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 30s
+      
+
+  auth-db:
+    image: mysql:8.4
+    restart: unless-stopped
+    env_file:
+      - ./auth-service/.env
+    volumes:
+      - auth-db-data:/var/lib/mysql
+      - ./database/auth.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    networks:
+      - backend-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 30s
+    
+
+  user-service:
+    build: ./user-service
+    restart: unless-stopped
+    env_file:
+      - ./user-service/.env
+    environment:
+      DB_HOST: user-db
+      DB_PORT: 3306
+      DEVICE_SERVICE_URL: http://device-service:8080
+    depends_on:
+      user-db:
+        condition: service_healthy
+    networks:
+      - backend-network
+
+  device-service:
+    build: ./device-service
+    restart: unless-stopped
+    env_file:
+      - ./device-service/.env
+    environment:
+      DB_HOST: device-db
+      DB_PORT: 3306
+      USER_SERVICE_URL: http://user-service:8080
+    depends_on:
+      device-db:
+        condition: service_healthy
+    networks:
+      - backend-network
+
+  auth-service:
+    build: ./auth-service
+    restart: unless-stopped
+    env_file:
+      - ./auth-service/.env
+    environment:
+      DB_HOST: auth-db
+      DB_PORT: 3306
+      USER_SERVICE_URL: http://user-service:8080
+    depends_on:
+      auth-db:
+        condition: service_healthy
+    networks:
+      - backend-network
+
+  traefik:
+    image: traefik:v3.3
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./dynamic:/etc/traefik/dynamic:ro
+      - ./logs:/var/log/traefik
+    networks:
+      - proxy-network
+      - backend-network
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    networks:
+      - proxy-network
+
+volumes:
+  user-db-data:
+  device-db-data:
+  auth-db-data:
+
+networks:
+  proxy-network:
+    name: proxy-network
+  backend-network:
+    internal: true

@@ -1,0 +1,109 @@
+http:
+  routers:
+    user-router:
+      rule: "Host(`localhost`) && (Path(`/api/person`) || PathPrefix(`/api/person/`))"
+      entryPoints:
+        - web
+      middlewares:
+        - jwt-auth
+        - strip-api-prefix
+      service: user-service
+
+    user-docs-router:
+      rule: "Host(`localhost`) && PathPrefix(`/docs/users/`)"
+      entryPoints:
+        - web
+      priority: 100
+      service: user-service
+    device-router:
+      rule: "Host(`localhost`) && (Path(`/api/devices`) || PathPrefix(`/api/devices/`))"
+      entryPoints:
+        - web
+      middlewares:
+        - jwt-auth
+        - strip-api-prefix
+      service: device-service
+
+    device-docs-router:
+      rule: "Host(`localhost`) && PathPrefix(`/docs/devices/`)"
+      entryPoints:
+        - web
+      priority: 100
+      service: device-service
+
+    auth-router:
+      rule: "Host(`localhost`) && Path(`/api/auth/login`)"
+      entryPoints:
+        - web
+      middlewares:
+        - strip-api-prefix
+      priority: 100
+      service: auth-service
+
+    auth-docs-router:
+      rule: "Host(`localhost`) && PathPrefix(`/docs/auth/`)"
+      entryPoints:
+        - web
+      priority: 100
+      service: auth-service
+
+    logout-router:
+      rule: "Host(`localhost`) && Path(`/api/auth/logout`)"
+      entryPoints:
+        - web
+      middlewares:
+        - strip-api-prefix
+      priority: 100
+      service: auth-service
+
+    frontend-router:
+      rule: "Host(`localhost`) && PathPrefix(`/`)"
+      entryPoints:
+        - web
+      priority: 1
+      service: frontend-service
+
+    current-user-router:
+      rule: "Host(`localhost`) && Path(`/api/auth/me`)"
+      entryPoints:
+        - web
+      middlewares:
+        - strip-api-prefix
+      priority: 100
+      service: auth-service
+
+  middlewares:
+    jwt-auth:
+      forwardAuth:
+        address: "http://auth-service:8080/auth/validate"
+        trustForwardHeader: false
+        authRequestHeaders:
+          - Cookie
+          - Origin
+        authResponseHeaders:
+          - X-Authenticated-User-Id
+    strip-api-prefix:
+      stripPrefix:
+        prefixes:
+          - /api
+
+  services:
+    user-service:
+      loadBalancer:
+        servers:
+          - url: "http://user-service:8080"
+
+    device-service:
+      loadBalancer:
+        servers:
+          - url: "http://device-service:8080"
+
+    frontend-service:
+      loadBalancer:
+        servers:
+          - url: "http://frontend:80"
+
+    auth-service:
+      loadBalancer:
+        servers:
+          - url: "http://auth-service:8080"
