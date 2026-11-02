@@ -13,3 +13,4 @@ logs/
 .DS_Store
 Thumbs.db
 desktop.ini
+/auth-service/Microsoft/
